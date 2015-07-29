@@ -1,0 +1,74 @@
+#!/bin/bash
+
+print_usage(){
+  echo "Usage:"
+  echo "  stumky-docker-build [OPTIONS]"
+  echo ""
+  echo "  OPTIONS can be:"
+  echo "  --help, -h     print help and exit."
+  echo "  --no-push, -n  dry run. dont push to pierone."
+  echo "  --release, -r  build a release version instead of a snapshot version"
+  echo ""
+}
+
+ARG_PUSH="1"
+ARG_RELEASE="0"
+for ARG in $@; do
+  if [ $ARG == "--help" ] || [ $ARG == "-h" ]; then
+    print_usage
+    exit 0
+  elif [ $ARG == "--no-push" ] || [ $ARG == "-n" ]; then
+    ARG_PUSH="0"
+  elif [ $ARG == "--release" ] || [ $ARG == "-r" ]; then
+    ARG_RELEASE="1"
+  fi
+done
+
+
+source stumky-init
+
+if [ -f ./.docker-version ]; then
+  VERSION=`cat ./.docker-version`
+#  if [ $ARG_KEEP -eq 0 ]; then
+#    let VERSION=$VERSION+1
+#  fi
+else
+  VERSION="1-SNAPSHOT"
+fi
+
+if [ $ARG_RELEASE -eq 1 ]; then
+  if [[ $VERSION == *"-SNAPSHOT" ]]; then
+    VERSION=`echo $VERSION | sed 's/-.*$//g'`
+  else
+    let VERSION=$VERSION+1
+  fi
+else
+  if [[ ! $VERSION == *"-SNAPSHOT" ]]; then
+    let VERSION=$VERSION+1
+    VERSION="$VERSION-SNAPSHOT"
+  fi
+fi
+
+if [ -z $PIERONE_APP_PREFIX ]; then
+  echo "ERROR: Environmen variable PIERONE_APP_PREFIX is not set. " 
+  echo "ERROR: Please set is (e.g. in the ~/.profile) or add it manually to the .application file."
+  echo "ERROR: E.g. PIERONE_APP_PREFIX=pierone.example.com/myteam/"
+  exit 1
+fi
+
+IMAGE="${PIERONE_APP_PREFIX}${APPLICATION_NAME}:${VERSION}"
+
+echo "Image:           $IMAGE"
+
+docker build -t $IMAGE . || exit 2
+
+if [ $ARG_PUSH -eq 1 ]; then
+  docker push $IMAGE || exit 2
+else
+  echo "Skip pushing to pierone"
+fi
+
+echo $VERSION > ./.docker-version
+
+echo "== SUCCESS =="
+

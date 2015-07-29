@@ -1,0 +1,47 @@
+#!/bin/bash
+
+if [ ! -f ./.application ]; then
+  echo "No .application file exists."
+  echo -n "APPLICATION_NAME=" && read APPLICATION_NAME
+
+  shopt -s nullglob
+  YAMLS=(*.yaml)
+  YAMLS_LEN=${#YAMLS[@]}
+  if [ $YAMLS_LEN -lt 1 ]; then
+    echo "No senza *.yaml was found."
+  elif [ $YAMLS_LEN -gt 1 ]; then
+    echo "Multiple yaml files were found:"
+    for yaml in ${YAMLS[@]}; do
+      echo "    $yaml"
+    done
+  fi
+
+  if [ $YAMLS_LEN -eq 1 ]; then
+    YAML=${YAMLS[0]}
+  else
+    echo -n "Name of senza yaml file: " && read YAML
+  fi
+
+  echo "APPLICATION_NAME=${APPLICATION_NAME}" > ./.application
+  echo "YAML=${YAML}" >> ./.application
+  echo "" >> ./.application
+  echo ".application file was written."
+fi
+
+source ./.application
+
+# .applicatin file sanity checks
+if [ -z "$APPLICATION_NAME" ] || [ -z "$YAML" ] ; then
+
+  [ -z "x$APPLICATION_NAME" ] || echo "ERROR: APPLICATION_NAME is not set."
+  [ -z "x$YAML" ] || echo "ERROR: YAML is not set."
+  echo "ERROR: You probably have a corrupted .application settings file."
+  echo "ERROR: Try 'rm .application' and run it again."
+  exit 1
+
+fi
+
+echo "ApplicationName: $APPLICATION_NAME"
+echo "Yaml:            $YAML"
+
+

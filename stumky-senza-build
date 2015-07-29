@@ -1,0 +1,55 @@
+#!/bin/bash
+
+print_usage(){
+  echo "Usage:"
+  echo "  stumky-senza-build [OPTIONS]"
+  echo ""
+  echo "  OPTIONS can be:"
+  echo "  --events    show the cloud formation event log immediately after deployment"
+  echo ""
+}
+
+ARGS_EVENTS="0"
+for ARG in $@; do
+  if [ $ARG == "--help" ] || [ $ARG == "-h" ]; then
+    print_usage
+    exit 0
+  elif [ $ARG == "--events" ]; then
+    ARG_EVENTS="1"
+  fi
+done
+
+source stumky-init
+
+if [ ! -f ./.docker-version ]; then
+  echo "ERROR: No file .docker-version was found. Can not determine the docker image version to use."
+  echo "ERROR: Please run docker-build.sh first."
+  exit 1
+fi
+
+DOCKER_VERSION=`cat ./.docker-version`
+
+if [ -f ./.template-version ]; then
+  TEMPLATE_VERSION=`cat ./.template-version`
+  let TEMPLATE_VERSION=$TEMPLATE_VERSION+1
+else
+  TEMPLATE_VERSION=1
+fi
+
+echo "Build Template $YAML:$TEMPLATE_VERSION with docker image $DOCKER_VERSION..."
+
+if [ ! -f $YAML ]; then
+  echo "ERROR: senza yaml file $YAML does not exist."
+  exit 1
+fi
+
+senza create $YAML $TEMPLATE_VERSION $DOCKER_VERSION || exit 2
+
+echo "$TEMPLATE_VERSION" > .template-version
+
+echo "== SUCCESS =="
+
+if [ $ARG_EVENTS -eq 1 ]; then
+  senza events $APPLICATION_NAME --watch 2
+fi
+

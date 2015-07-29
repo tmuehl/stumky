@@ -1,0 +1,15 @@
+#!/bin/bash
+
+print_usage(){
+  echo "Usage: stumky-scalyr-log <logname>"
+}
+
+if [ $# -ne 1 ] || [ $1 == "-h" ] || [ $1 == "--help" ]; then
+  print_usage
+  exit 0
+fi
+
+source stumky-init
+
+scalyr query '$logfile='"'/var/log/$1' "'$serverHost'"='$APPLICATION_NAME'" --output singleline --count 5000 --mode tail | grep -v 'stack='
+
